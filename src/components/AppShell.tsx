@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { ApiKeyGate } from "@/components/ApiKeyGate";
 import { ChatPanel } from "@/components/ChatPanel";
 import { SettingsModal } from "@/components/SettingsModal";
 import { SuggestionsPanel } from "@/components/SuggestionsPanel";
@@ -92,25 +93,21 @@ export function AppShell() {
   useEffect(() => {
     const persisted = localStorage.getItem(LOCAL_SETTINGS_KEY);
     const apiKey = sessionStorage.getItem(SESSION_API_KEY) ?? "";
+    let settings = normalizeSettings({ ...stateRef.current.settings, groqApiKey: apiKey });
 
     if (persisted) {
       try {
-        const hydratedSettings = normalizeSettings({
+        settings = normalizeSettings({
           ...stateRef.current.settings,
           ...JSON.parse(persisted),
           groqApiKey: apiKey,
         });
-        dispatch({
-          type: "hydrate_settings",
-          settings: hydratedSettings,
-        });
-        return;
       } catch {
         localStorage.removeItem(LOCAL_SETTINGS_KEY);
       }
     }
 
-    dispatch({ type: "hydrate_settings", settings: normalizeSettings({ ...stateRef.current.settings, groqApiKey: apiKey }) });
+    dispatch({ type: "hydrate_settings", settings });
   }, []);
 
   useEffect(() => {
@@ -732,6 +729,15 @@ export function AppShell() {
     setSettingsOpen(false);
   }, []);
 
+  const saveApiKey = useCallback(
+    (apiKey: string) => {
+      saveSettings({ ...stateRef.current.settings, groqApiKey: apiKey });
+    },
+    [saveSettings],
+  );
+
+  const hasGroqApiKey = Boolean(normalizeGroqApiKey(state.settings.groqApiKey));
+
   return (
     <main className="flex h-screen min-h-160 flex-col overflow-hidden bg-[#0b0d12] text-slate-100">
       <header className="flex items-center justify-between border-b border-slate-800 bg-[#10131a] px-5 py-3">
@@ -739,13 +745,15 @@ export function AppShell() {
           <h1 className="text-base font-bold tracking-wide text-slate-100">TwinMind - Live Suggestions App</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => downloadSessionExport(state)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm font-semibold text-slate-300 hover:border-blue-400 hover:text-white"
-          >
-            Export JSON
-          </button>
+          {hasGroqApiKey ? (
+            <button
+              type="button"
+              onClick={() => downloadSessionExport(state)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm font-semibold text-slate-300 hover:border-blue-400 hover:text-white"
+            >
+              Export JSON
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -756,18 +764,30 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[1.02fr_1fr_1.02fr]">
-        <TranscriptPanel state={state} errors={panelErrors.transcript} onToggleMic={toggleMic} />
-        <SuggestionsPanel
-          state={state}
-          errors={panelErrors.suggestions}
-          nextSuggestionDueAt={nextSuggestionDueAt}
-          refreshIntervalMs={state.settings.suggestionRefreshIntervalMs}
-          onRefresh={refreshSuggestions}
-          onSelectSuggestion={selectSuggestion}
+      {!hasGroqApiKey ? (
+        <ApiKeyGate
+          initialApiKey={state.settings.groqApiKey}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onSaveKey={saveApiKey}
         />
-        <ChatPanel state={state} errors={panelErrors.chat} onSendMessage={(message) => void sendChatMessage(message)} />
-      </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[1.02fr_1fr_1.02fr]">
+          <TranscriptPanel state={state} errors={panelErrors.transcript} onToggleMic={toggleMic} />
+          <SuggestionsPanel
+            state={state}
+            errors={panelErrors.suggestions}
+            nextSuggestionDueAt={nextSuggestionDueAt}
+            refreshIntervalMs={state.settings.suggestionRefreshIntervalMs}
+            onRefresh={refreshSuggestions}
+            onSelectSuggestion={selectSuggestion}
+          />
+          <ChatPanel
+            state={state}
+            errors={panelErrors.chat}
+            onSendMessage={(message) => void sendChatMessage(message)}
+          />
+        </div>
+      )}
 
       {settingsOpen ? (
         <SettingsModal settings={state.settings} onClose={() => setSettingsOpen(false)} onSave={saveSettings} />

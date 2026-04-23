@@ -62,14 +62,12 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">
       <form
         onSubmit={handleSubmit}
-        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-2xl"
       >
         <header className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
           <div>
             <h2 className="text-lg font-bold text-slate-100">Settings</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Defaults follow the assignment cadence: roughly 30s transcript and suggestion refreshes.
-            </p>
+            <p className="mt-1 text-sm text-slate-500">Tune how the copilot listens, reasons, and answers.</p>
           </div>
           <button
             type="button"
@@ -81,8 +79,11 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          <div className="grid gap-5">
-            <SettingsSection title="Groq API" description="Session-only key. The app never exports or persists it.">
+          <div className="grid gap-4">
+            <SettingsSection
+              title="Groq connection"
+              description="Used for Whisper transcription and GPT-OSS suggestions/chat. Stored in sessionStorage only."
+            >
               <label className="grid gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">API key</span>
                 <div className="flex gap-2">
@@ -122,14 +123,84 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
               </label>
             </SettingsSection>
 
+            <SettingsSection title="Prompts" description="Control what the model optimizes for in each part of the app.">
+              <div className="grid gap-4">
+                <PromptField
+                  label="Live suggestion prompt"
+                  helper="Controls the 3 cards in the middle column: card mix, grounding, urgency, and non-repetition."
+                  value={draft.liveSuggestionPrompt}
+                  onChange={(value) => update("liveSuggestionPrompt", value)}
+                />
+                <PromptField
+                  label="Clicked suggestion answer prompt"
+                  helper="Controls the streamed expansion after a card click. Keep this skimmable and meeting-ready."
+                  value={draft.expandedAnswerPrompt}
+                  onChange={(value) => update("expandedAnswerPrompt", value)}
+                />
+                <PromptField
+                  label="Direct chat prompt"
+                  helper="Controls typed questions in the chat panel, including recommendations and wording to say out loud."
+                  value={draft.chatPrompt}
+                  onChange={(value) => update("chatPrompt", value)}
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsSection
+              title="Context"
+              description="Choose how much transcript the model can see. Character caps keep latency predictable."
+            >
+              <div className="grid gap-3 md:grid-cols-3">
+                <NumberField
+                  label="Suggestion window"
+                  helper="Recent minutes used for live cards. Larger is better for continuity, smaller stays focused."
+                  suffix="min"
+                  value={draft.suggestionContextMinutes}
+                  onChange={(value) => update("suggestionContextMinutes", value)}
+                  min={1}
+                />
+                <NumberField
+                  label="Suggestion cap"
+                  helper="Recent characters sent to the suggestion model. Default balances relevance and speed."
+                  suffix="chars"
+                  value={draft.suggestionContextChars}
+                  onChange={(value) => update("suggestionContextChars", value)}
+                  min={3000}
+                />
+                <NumberField
+                  label="Prior batches"
+                  helper="Recent card batches included so the model avoids repeating the same idea."
+                  value={draft.previousSuggestionBatches}
+                  onChange={(value) => update("previousSuggestionBatches", value)}
+                  min={0}
+                />
+                <NumberField
+                  label="Answer window"
+                  helper="Minutes available when expanding a clicked card or answering direct chat."
+                  suffix="min"
+                  value={draft.expandedAnswerContextMinutes}
+                  onChange={(value) => update("expandedAnswerContextMinutes", value)}
+                  min={1}
+                />
+                <NumberField
+                  label="Answer cap"
+                  helper="More context gives better grounding; too much can slow first tokens."
+                  suffix="chars"
+                  value={draft.expandedAnswerContextChars}
+                  onChange={(value) => update("expandedAnswerContextChars", value)}
+                  min={8000}
+                />
+              </div>
+            </SettingsSection>
+
             <SettingsSection
               title="Timing"
-              description="Transcripts update quickly; suggestions wait for enough context."
+              description="Higher values reduce API calls and repetition. Lower values make demos feel more immediate."
             >
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <NumberField
                   label="Transcript segment"
-                  helper="Default 30000ms. Lower this for faster demos."
+                  helper="How often a complete mic segment is sent to Whisper."
                   suffix="ms"
                   value={draft.chunkIntervalMs}
                   onChange={(value) => update("chunkIntervalMs", value)}
@@ -137,7 +208,7 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
                 />
                 <NumberField
                   label="Suggestion refresh"
-                  helper="Default 30000ms. Manual reload can force sooner."
+                  helper="How often fresh cards are generated when new transcript exists. Manual reload can force sooner."
                   suffix="ms"
                   value={draft.suggestionRefreshIntervalMs}
                   onChange={(value) => update("suggestionRefreshIntervalMs", value)}
@@ -146,52 +217,8 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Context" description="Controls what transcript context the model sees. Time windows are capped by characters for latency and focus.">
-              <div className="grid gap-4 md:grid-cols-3">
-                <NumberField
-                  label="Suggestion context"
-                  helper="Recent transcript used for live cards."
-                  suffix="min"
-                  value={draft.suggestionContextMinutes}
-                  onChange={(value) => update("suggestionContextMinutes", value)}
-                  min={1}
-                />
-                <NumberField
-                  label="Suggestion cap"
-                  helper="Default 4500 chars from the latest transcript."
-                  suffix="chars"
-                  value={draft.suggestionContextChars}
-                  onChange={(value) => update("suggestionContextChars", value)}
-                  min={3000}
-                />
-                <NumberField
-                  label="Answer context"
-                  helper="Larger window for clicked-card answers."
-                  suffix="min"
-                  value={draft.expandedAnswerContextMinutes}
-                  onChange={(value) => update("expandedAnswerContextMinutes", value)}
-                  min={1}
-                />
-                <NumberField
-                  label="Answer cap"
-                  helper="Default 10000 chars for grounded expansion."
-                  suffix="chars"
-                  value={draft.expandedAnswerContextChars}
-                  onChange={(value) => update("expandedAnswerContextChars", value)}
-                  min={8000}
-                />
-                <NumberField
-                  label="Previous batches"
-                  helper="Used to reduce repeated suggestions."
-                  value={draft.previousSuggestionBatches}
-                  onChange={(value) => update("previousSuggestionBatches", value)}
-                  min={0}
-                />
-              </div>
-            </SettingsSection>
-
-            <SettingsSection title="Audio Gate" description="Skips unusable silent chunks without interrupting the session.">
-              <div className="grid gap-4 md:grid-cols-3">
+            <SettingsSection title="Audio processing" description="Skip low-signal chunks that would create empty transcript lines or media errors.">
+              <div className="grid gap-3 md:grid-cols-3">
                 <label className="flex min-h-24 items-center gap-3 rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
                   <input
                     checked={draft.silenceGateEnabled}
@@ -200,13 +227,15 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
                     className="h-4 w-4 accent-blue-500"
                   />
                   <div>
-                    <span className="text-sm font-semibold text-slate-300">Skip silent segments</span>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">Recommended for demos with pauses or music.</p>
+                    <span className="text-sm font-semibold text-slate-300">Skip low-signal segments</span>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Keeps pauses, silence, and background audio from interrupting the session.
+                    </p>
                   </div>
                 </label>
                 <NumberField
                   label="Voice threshold"
-                  helper="Higher skips more background noise."
+                  helper="Higher values ignore more background noise. Lower values capture softer speakers."
                   value={draft.voiceActivityThreshold}
                   onChange={(value) => update("voiceActivityThreshold", value)}
                   min={0}
@@ -214,34 +243,11 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
                 />
                 <NumberField
                   label="Minimum voice"
-                  helper="Required speech activity per segment."
+                  helper="Required speech-like audio per segment before sending it to Whisper."
                   suffix="ms"
                   value={draft.minVoiceMs}
                   onChange={(value) => update("minVoiceMs", value)}
                   min={0}
-                />
-              </div>
-            </SettingsSection>
-
-            <SettingsSection title="Prompts" description="Advanced tuning. Defaults are optimized for this assignment.">
-              <div className="grid gap-4">
-                <PromptField
-                  label="Live suggestion prompt"
-                  helper="Generates exactly 3 concise, useful cards."
-                  value={draft.liveSuggestionPrompt}
-                  onChange={(value) => update("liveSuggestionPrompt", value)}
-                />
-                <PromptField
-                  label="Clicked suggestion answer prompt"
-                  helper="Expands a card into a 10-20 second skimmable answer."
-                  value={draft.expandedAnswerPrompt}
-                  onChange={(value) => update("expandedAnswerPrompt", value)}
-                />
-                <PromptField
-                  label="Direct chat prompt"
-                  helper="Used when the user types a question directly."
-                  value={draft.chatPrompt}
-                  onChange={(value) => update("chatPrompt", value)}
                 />
               </div>
             </SettingsSection>
@@ -341,8 +347,8 @@ function PromptField({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        rows={7}
-        className="resize-y rounded-md border border-slate-800 bg-slate-900 px-3 py-2 font-mono text-xs leading-5 text-slate-100 outline-none focus:border-blue-400"
+        rows={5}
+        className="max-h-72 resize-y rounded-md border border-slate-800 bg-slate-900 px-3 py-2 font-mono text-xs leading-5 text-slate-100 outline-none focus:border-blue-400"
       />
     </label>
   );

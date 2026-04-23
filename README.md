@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, open Settings, and paste a Groq API key.
+Open `http://localhost:3000` and paste a Groq API key on the setup screen. Settings remain available for prompt, context, timing, and audio tuning.
 
 The API key is stored only in `sessionStorage`. Prompts and numeric settings are stored in `localStorage`.
 
