@@ -19,6 +19,8 @@ export function capTranscriptWindowByChars(chunks: TranscriptChunk[], maxChars: 
   const selected: TranscriptChunk[] = [];
   let totalChars = 0;
 
+  // Keep complete chunks while trimming from the oldest side. This preserves
+  // timestamp/id grounding for prompts and exported sourceTranscriptIds.
   for (let index = chunks.length - 1; index >= 0; index -= 1) {
     const chunk = chunks[index];
     const chunkChars = transcriptToText([chunk]).length + 1;
@@ -57,13 +59,4 @@ export function formatTime(iso: string) {
     minute: "2-digit",
     second: "2-digit",
   });
-}
-
-export function truncateMiddle(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  const keep = Math.max(4, Math.floor((maxLength - 3) / 2));
-  return `${value.slice(0, keep)}...${value.slice(-keep)}`;
 }

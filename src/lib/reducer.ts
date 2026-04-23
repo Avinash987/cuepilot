@@ -21,8 +21,7 @@ export type AppAction =
   | { type: "append_chat_delta"; messageId: string; delta: string }
   | { type: "replace_chat_message"; messageId: string; content: string }
   | { type: "add_error"; panel: PanelName; message: string }
-  | { type: "clear_panel_errors"; panel: PanelName }
-  | { type: "reset_session" };
+  | { type: "clear_panel_errors"; panel: PanelName };
 
 export function createId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -133,12 +132,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         errors: state.errors.filter((error) => error.panel !== action.panel),
-      };
-
-    case "reset_session":
-      return {
-        ...createInitialState(),
-        settings: state.settings,
       };
 
     default:

@@ -27,6 +27,8 @@ const VALID_TYPES = new Set<SuggestionType>([
 const VALID_URGENCY = new Set<SuggestionUrgency>(["now", "soon", "later"]);
 const VALID_CONFIDENCE = new Set<SuggestionConfidence>(["low", "medium", "high"]);
 
+// Structured output is the primary contract for the suggestions UI. The parser
+// fallback below is only defensive, not the normal path.
 const suggestionResponseFormat = {
   type: "json_schema",
   json_schema: {
@@ -197,6 +199,8 @@ export async function POST(request: Request) {
         ? suggestion.sourceTranscriptIds.filter((id) => transcriptIds.has(id))
         : [];
 
+      // Never trust model-provided ids blindly. Unknown ids are replaced with
+      // the latest available transcript chunk so export grounding stays valid.
       return {
         id: `suggestion_${crypto.randomUUID()}`,
         type,

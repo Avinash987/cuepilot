@@ -2,6 +2,8 @@ import { CHAT_MODEL, TRANSCRIPTION_MODEL } from "./defaults";
 
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
+// Evaluators often paste keys from docs, env files, or Authorization headers.
+// Normalize those forms once so every API route can use the same value.
 export function normalizeGroqApiKey(apiKey: string) {
   const cleaned = apiKey
     .trim()
@@ -46,30 +48,6 @@ export function groqErrorMessage(status: number, detail: string) {
   }
 
   return detail || `Groq request failed with ${status}`;
-}
-
-export async function groqJson<T>(
-  apiKey: string,
-  path: string,
-  body: Record<string, unknown>,
-  signal?: AbortSignal,
-): Promise<T> {
-  const response = await fetch(`${GROQ_BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${normalizeGroqApiKey(apiKey)}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || `Groq request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as T;
 }
 
 export async function groqChatCompletion(

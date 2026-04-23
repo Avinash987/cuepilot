@@ -96,6 +96,8 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
+  // Keep Groq behind the Next route while still giving the browser low-latency
+  // token deltas via standard Server-Sent Events.
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const reader = upstream.body!.getReader();

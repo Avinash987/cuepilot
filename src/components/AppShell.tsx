@@ -19,12 +19,12 @@ type AudioJob = {
   startedAt: string;
   endedAt: string;
   manual: boolean;
-  final: boolean;
   mimeType: string;
   voiceMs: number;
-  maxRms: number;
 };
 
+// Whisper is much more reliable with complete media files than with arbitrary
+// MediaRecorder timeslice fragments, so the app rotates full recorder segments.
 const MIN_AUDIO_CHUNK_BYTES = 2048;
 const MIN_AUDIO_CHUNK_MS = 1200;
 const VAD_SAMPLE_INTERVAL_MS = 250;
@@ -32,9 +32,7 @@ const MIN_TRANSCRIPT_SEGMENT_MS = 8000;
 const MIN_SUGGESTION_REFRESH_MS = 16000;
 
 type VadStats = {
-  samples: number;
   voiceSamples: number;
-  maxRms: number;
 };
 
 type AudioWindow = Window &
@@ -76,16 +74,17 @@ export function AppShell() {
   const segmentBlobsRef = useRef<Blob[]>([]);
   const queueRef = useRef<AudioJob[]>([]);
   const processingRef = useRef(false);
-  const segmentStartedAtRef = useRef<string>(new Date().toISOString());
   const pendingManualFlushRef = useRef(false);
   const recordingActiveRef = useRef(false);
   const currentMimeTypeRef = useRef("");
-  const vadStatsRef = useRef<VadStats>({ samples: 0, voiceSamples: 0, maxRms: 0 });
+  const vadStatsRef = useRef<VadStats>({ voiceSamples: 0 });
   const stopRequestedRef = useRef(false);
   const startRecorderSegmentRef = useRef<() => void>(() => {});
   const lastSuggestionRefreshAtRef = useRef(0);
   const lastSuggestedTranscriptIdRef = useRef("");
 
+  // Async browser callbacks should always read current state, not the render
+  // snapshot captured when the callback was created.
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -202,6 +201,8 @@ export function AppShell() {
       const isDue =
         !lastSuggestionRefreshAtRef.current || elapsed >= current.settings.suggestionRefreshIntervalMs;
 
+      // Live suggestions should feel fresh, but repeated ASR chunks should not
+      // spam the middle column with near-duplicate batches.
       if (!force && (!hasNewTranscript || !isDue)) {
         return false;
       }
@@ -239,6 +240,8 @@ export function AppShell() {
         const isLowSignal =
           current.settings.silenceGateEnabled && job.voiceMs < current.settings.minVoiceMs && !job.manual;
 
+        // Silent/short chunks are expected during real meetings. Treat them as
+        // non-events instead of surfacing errors or adding empty transcript rows.
         if (isTooSmallForWhisper || isLowSignal) {
           dispatch({ type: "set_work_status", area: "transcript", status: "idle" });
 
@@ -332,6 +335,8 @@ export function AppShell() {
     processingRef.current = true;
 
     try {
+      // Keep transcription sequential so chunks append in the same order they
+      // were recorded, even if a later request would finish faster.
       while (queueRef.current.length > 0) {
         const job = queueRef.current.shift();
 
@@ -360,7 +365,7 @@ export function AppShell() {
   }, []);
 
   const resetVadStats = useCallback(() => {
-    vadStatsRef.current = { samples: 0, voiceSamples: 0, maxRms: 0 };
+    vadStatsRef.current = { voiceSamples: 0 };
   }, []);
 
   const cleanupAudioResources = useCallback(() => {
@@ -401,6 +406,8 @@ export function AppShell() {
     audioSourceRef.current = source;
     analyserRef.current = analyser;
 
+    // This is intentionally lightweight VAD. It only decides whether a segment
+    // has enough speech-like signal to be worth sending to Whisper.
     vadTimerRef.current = setInterval(() => {
       analyser.getByteTimeDomainData(samples);
 
@@ -414,9 +421,7 @@ export function AppShell() {
       const threshold = stateRef.current.settings.voiceActivityThreshold;
       const current = vadStatsRef.current;
       vadStatsRef.current = {
-        samples: current.samples + 1,
         voiceSamples: current.voiceSamples + (rms >= threshold ? 1 : 0),
-        maxRms: Math.max(current.maxRms, rms),
       };
     }, VAD_SAMPLE_INTERVAL_MS);
   }, []);
@@ -442,7 +447,6 @@ export function AppShell() {
 
     recorderRef.current = recorder;
     segmentBlobsRef.current = [];
-    segmentStartedAtRef.current = startedAt;
     resetVadStats();
 
     recorder.ondataavailable = (event) => {
@@ -455,7 +459,6 @@ export function AppShell() {
       clearSegmentTimer();
       const endedAt = new Date().toISOString();
       const manual = pendingManualFlushRef.current;
-      const final = stopRequestedRef.current;
       const blobs = segmentBlobsRef.current;
       const vadStats = vadStatsRef.current;
 
@@ -468,10 +471,8 @@ export function AppShell() {
           startedAt,
           endedAt,
           manual,
-          final,
           mimeType: recorder.mimeType || mimeType || "audio/webm",
           voiceMs: vadStats.voiceSamples * VAD_SAMPLE_INTERVAL_MS,
-          maxRms: vadStats.maxRms,
         });
       } else if (manual && stateRef.current.transcriptChunks.length > 0) {
         void maybeGenerateSuggestions(
@@ -568,6 +569,8 @@ export function AppShell() {
   const refreshSuggestions = useCallback(() => {
     const recorder = recorderRef.current;
 
+    // Manual refresh should use everything said so far, including the current
+    // partial segment, before asking the suggestion model for new cards.
     if (recorder && recorder.state === "recording") {
       pendingManualFlushRef.current = true;
       clearSegmentTimer();
@@ -660,6 +663,8 @@ export function AppShell() {
           const events = buffer.split("\n\n");
           buffer = events.pop() ?? "";
 
+          // The API route converts Groq's OpenAI-compatible stream into small
+          // SSE delta events that are easy for the client reducer to append.
           for (const event of events) {
             const lines = event.split("\n");
             const eventName = lines

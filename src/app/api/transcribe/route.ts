@@ -18,6 +18,8 @@ export async function POST(request: Request) {
   }
 
   const upstreamData = new FormData();
+  // Build a fresh FormData so client-only metadata never leaks into Groq's
+  // transcription endpoint.
   upstreamData.append("file", audio, filename);
 
   const upstream = await groqTranscription(apiKey, upstreamData);

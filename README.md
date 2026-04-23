@@ -1,4 +1,4 @@
-# TwinMind Live Suggestions POC
+# TwinMind Live Suggestions
 
 A Next.js web app for the TwinMind live suggestions assignment. It records microphone audio, transcribes short complete audio segments with Groq Whisper, generates exactly 3 live suggestions from recent meeting context, and streams detailed chat answers with Groq GPT-OSS 120B.
 
@@ -21,6 +21,10 @@ npm run dev
 Open `http://localhost:3000` and paste a Groq API key on the setup screen. Settings remain available for prompt, context, timing, and audio tuning.
 
 The API key is stored only in `sessionStorage`. Prompts and numeric settings are stored in `localStorage`.
+
+## Documentation
+
+- [Architecture](./docs/ARCHITECTURE.md): runtime flow, state model, audio pipeline, API routes, prompt strategy, and module map.
 
 ## Product Flow
 
