@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         `Preview: ${clickedSuggestion.preview}`,
         clickedSuggestion.rationale ? `Rationale: ${clickedSuggestion.rationale}` : "",
         "",
-        "For clicked suggestions, expand the card with transcript-grounded detail. Give the user a useful answer they can act on in the meeting. Do not say this is a detailed answer or explain your prompt.",
+        "For clicked suggestions, expand the card with transcript-grounded detail. Use the required Context / Key points / You could say structure. Do not say this is a detailed answer or explain your prompt.",
       ]
         .filter(Boolean)
         .join("\n")

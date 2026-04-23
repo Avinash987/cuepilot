@@ -79,6 +79,7 @@ export async function groqChatCompletion(
     temperature?: number;
     maxTokens?: number;
     stream?: boolean;
+    responseFormat?: Record<string, unknown>;
   },
 ) {
   return fetch(`${GROQ_BASE_URL}/chat/completions`, {
@@ -93,6 +94,7 @@ export async function groqChatCompletion(
       temperature: options?.temperature ?? 0.3,
       max_completion_tokens: options?.maxTokens ?? 1200,
       stream: options?.stream ?? false,
+      ...(options?.responseFormat ? { response_format: options.responseFormat } : {}),
     }),
   });
 }

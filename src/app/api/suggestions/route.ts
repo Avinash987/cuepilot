@@ -27,6 +27,62 @@ const VALID_TYPES = new Set<SuggestionType>([
 const VALID_URGENCY = new Set<SuggestionUrgency>(["now", "soon", "later"]);
 const VALID_CONFIDENCE = new Set<SuggestionConfidence>(["low", "medium", "high"]);
 
+const suggestionResponseFormat = {
+  type: "json_schema",
+  json_schema: {
+    name: "live_suggestion_batch",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["suggestions"],
+      properties: {
+        suggestions: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "type",
+              "title",
+              "preview",
+              "rationale",
+              "urgency",
+              "confidence",
+              "sourceTranscriptIds",
+            ],
+            properties: {
+              type: {
+                type: "string",
+                enum: [
+                  "answer",
+                  "question_to_ask",
+                  "talking_point",
+                  "fact_check",
+                  "clarification",
+                  "risk",
+                  "next_step",
+                ],
+              },
+              title: { type: "string" },
+              preview: { type: "string" },
+              rationale: { type: "string" },
+              urgency: { type: "string", enum: ["now", "soon", "later"] },
+              confidence: { type: "string", enum: ["low", "medium", "high"] },
+              sourceTranscriptIds: {
+                type: "array",
+                items: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 type SuggestionRequest = {
   apiKey: string;
   transcriptWindow: TranscriptChunk[];
@@ -97,7 +153,7 @@ export async function POST(request: Request) {
         ].join("\n"),
       },
     ],
-    { temperature: 0.35, maxTokens: 1200 },
+    { temperature: 0.35, maxTokens: 1200, responseFormat: suggestionResponseFormat },
   );
 
   const raw = await response.text();

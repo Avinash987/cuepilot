@@ -68,7 +68,9 @@ export type AppSettings = {
   minVoiceMs: number;
   suggestionRefreshIntervalMs: number;
   suggestionContextMinutes: number;
+  suggestionContextChars: number;
   expandedAnswerContextMinutes: number;
+  expandedAnswerContextChars: number;
   previousSuggestionBatches: number;
   liveSuggestionPrompt: string;
   expandedAnswerPrompt: string;

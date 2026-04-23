@@ -68,7 +68,7 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
           <div>
             <h2 className="text-lg font-bold text-slate-100">Settings</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Defaults are tuned for the demo: 6s transcripts, 30s suggestions, concise grounded answers.
+              Defaults follow the assignment cadence: roughly 30s transcript and suggestion refreshes.
             </p>
           </div>
           <button
@@ -129,7 +129,7 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
               <div className="grid gap-4 md:grid-cols-2">
                 <NumberField
                   label="Transcript segment"
-                  helper="Default 8000ms. Short enough to feel live."
+                  helper="Default 30000ms. Lower this for faster demos."
                   suffix="ms"
                   value={draft.chunkIntervalMs}
                   onChange={(value) => update("chunkIntervalMs", value)}
@@ -137,7 +137,7 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
                 />
                 <NumberField
                   label="Suggestion refresh"
-                  helper="Default 16000ms. Manual reload can force sooner."
+                  helper="Default 30000ms. Manual reload can force sooner."
                   suffix="ms"
                   value={draft.suggestionRefreshIntervalMs}
                   onChange={(value) => update("suggestionRefreshIntervalMs", value)}
@@ -146,7 +146,7 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Context" description="Controls what transcript context the model sees.">
+            <SettingsSection title="Context" description="Controls what transcript context the model sees. Time windows are capped by characters for latency and focus.">
               <div className="grid gap-4 md:grid-cols-3">
                 <NumberField
                   label="Suggestion context"
@@ -157,12 +157,28 @@ export function SettingsModal({ settings, onClose, onSave }: SettingsModalProps)
                   min={1}
                 />
                 <NumberField
+                  label="Suggestion cap"
+                  helper="Default 4500 chars from the latest transcript."
+                  suffix="chars"
+                  value={draft.suggestionContextChars}
+                  onChange={(value) => update("suggestionContextChars", value)}
+                  min={3000}
+                />
+                <NumberField
                   label="Answer context"
                   helper="Larger window for clicked-card answers."
                   suffix="min"
                   value={draft.expandedAnswerContextMinutes}
                   onChange={(value) => update("expandedAnswerContextMinutes", value)}
                   min={1}
+                />
+                <NumberField
+                  label="Answer cap"
+                  helper="Default 10000 chars for grounded expansion."
+                  suffix="chars"
+                  value={draft.expandedAnswerContextChars}
+                  onChange={(value) => update("expandedAnswerContextChars", value)}
+                  min={8000}
                 />
                 <NumberField
                   label="Previous batches"

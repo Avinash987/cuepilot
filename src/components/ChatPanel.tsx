@@ -47,7 +47,10 @@ export function ChatPanel({ state, errors, onSendMessage }: ChatPanelProps) {
     <section className="flex min-h-0 flex-col rounded-lg border border-slate-800 bg-slate-950/70">
       <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">3. Chat (Detailed Answers)</p>
-        {showStatus ? <StatusBadge label={state.status.chat} tone={tone} /> : null}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Session-only</span>
+          {showStatus ? <StatusBadge label={state.status.chat} tone={tone} /> : null}
+        </div>
       </header>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

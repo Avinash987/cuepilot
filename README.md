@@ -25,11 +25,11 @@ The API key is stored only in `sessionStorage`. Prompts and numeric settings are
 ## Product Flow
 
 1. The browser records mic audio as complete rotating `MediaRecorder` segments.
-2. The default segment size is 8 seconds for low-latency transcript updates, configurable in Settings.
+2. The default segment size is 30 seconds to match the assignment cadence, configurable in Settings.
 3. Audio segments enter a FIFO queue.
 4. One sequential pipeline runs at a time:
    `audio chunk -> transcribe -> append transcript`.
-5. Suggestions run on a separate cadence, 16 seconds by default, so fast 8-second transcription does not create repetitive low-context cards.
+5. Suggestions run on a separate cadence, 30 seconds by default. Settings allow lower values for demos, but the shipped default follows the assignment.
 6. Manual refresh flushes the current recorder segment and forces a suggestion refresh.
 7. Very short, silent, or unusable segments are skipped safely instead of interrupting the session.
 8. Each suggestion refresh creates one new batch with exactly 3 cards at the top.
@@ -38,7 +38,14 @@ The API key is stored only in `sessionStorage`. Prompts and numeric settings are
 
 ## Prompt Strategy
 
-The live suggestion prompt is optimized for timing and usefulness instead of summaries. It asks the model to choose a mix from:
+The live suggestion prompt is optimized for timing and usefulness instead of summaries. It first asks the model to silently infer the conversation mode, then choose the best mix of cards for that moment:
+
+- **Setup**: clarify topic, goal, agenda, stakeholders, and success criteria
+- **Discovery**: uncover missing inputs, compare options, and answer active questions
+- **Tradeoff**: pressure-test costs, risks, assumptions, and decision criteria
+- **Handoff**: turn the discussion into owners, next steps, deadlines, and open risks
+
+The available card types are:
 
 - answer
 - question to ask
@@ -48,9 +55,11 @@ The live suggestion prompt is optimized for timing and usefulness instead of sum
 - risk
 - next step
 
-Each preview must be useful without clicking. The model receives the last 10 minutes of transcript, the latest chunk separately, and recent prior suggestion batches to reduce repetition. Fast transcript chunks are intentionally batched into 16-second suggestion refreshes so each batch has enough new context to be meaningfully different.
+Each preview must be useful without clicking. The suggestion model receives the last 10 minutes of transcript capped to 4,500 recent characters, the latest chunk separately, and recent prior suggestion batches to reduce repetition. The prompt also tells the model to treat repeated ASR chunks, partial sentences, and noisy audio as lower-confidence context, and to avoid precise external facts unless the transcript supports them or the card explicitly frames the item as something to verify. Transcript and suggestion refreshes default to roughly 30 seconds to match the assignment while still allowing faster demo tuning in Settings.
 
-Clicked suggestions use a larger transcript window by default, 25 minutes, with a separate expanded-answer prompt. These answers are intentionally longer than the live cards and grounded in the transcript. Direct chat uses the same transcript context and one continuous chat history.
+Suggestions use Groq structured outputs with a JSON schema, then the app validates the returned batch before rendering. The fallback parser remains in place so a transient formatting issue does not break the live session.
+
+Clicked suggestions use a larger transcript window by default, 25 minutes capped to 10,000 recent characters, with a separate expanded-answer prompt. The answer uses a fixed structure: **Context**, **Key points**, and **You could say:**. This keeps answers grounded, skimmable, and directly usable in the meeting rather than turning the chat panel into a long report. Direct chat uses the same transcript context and one continuous chat history.
 
 ## Settings
 
@@ -63,7 +72,9 @@ Editable in the app:
 - chunk interval
 - suggestion refresh interval
 - live suggestion context window
+- live suggestion character cap
 - expanded answer context window
+- expanded answer character cap
 - number of previous suggestion batches to include
 - silence gate toggle, voice threshold, and minimum voice duration
 
@@ -72,8 +83,8 @@ Editable in the app:
 - No database or authentication because the assignment only needs a single browser session.
 - Suggestions are non-streaming so the UI only renders validated JSON batches.
 - Chat streams through a server-sent event response for faster perceived latency.
-- There is no rolling summary yet; the default 10-minute window keeps live suggestions recent and easy to reason about.
-- Markdown chat output is displayed as plain text to keep dependencies minimal.
+- There is no rolling summary yet; the time window plus character cap keeps context recent, bounded, and easy to reason about.
+- Chat markdown is rendered with a small local renderer instead of a large dependency.
 - The recorder rotates complete media segments instead of uploading raw timeslice fragments, because browser WebM fragments are not always independently decodable by Whisper.
 
 ## Validation

@@ -10,7 +10,7 @@ import { audioExtensionFromMimeType, getSupportedAudioMimeType } from "@/lib/aud
 import { downloadSessionExport } from "@/lib/exportSession";
 import { normalizeGroqApiKey } from "@/lib/groq";
 import { appReducer, createId, createInitialState } from "@/lib/reducer";
-import { getTranscriptWindow } from "@/lib/transcript";
+import { getTranscriptWindowWithCap } from "@/lib/transcript";
 import type { AppSettings, ChatMessage, Suggestion, SuggestionBatch, TranscriptChunk } from "@/lib/types";
 
 type AudioJob = {
@@ -52,6 +52,8 @@ function normalizeSettings(settings: AppSettings): AppSettings {
     ),
     suggestionContextMinutes: Math.max(1, settings.suggestionContextMinutes || 10),
     expandedAnswerContextMinutes: Math.max(1, settings.expandedAnswerContextMinutes || 25),
+    suggestionContextChars: Math.max(3000, settings.suggestionContextChars || 4500),
+    expandedAnswerContextChars: Math.max(8000, settings.expandedAnswerContextChars || 10000),
     previousSuggestionBatches: Math.max(0, settings.previousSuggestionBatches ?? 3),
     voiceActivityThreshold: Math.max(0, settings.voiceActivityThreshold ?? 0.012),
     minVoiceMs: Math.max(0, settings.minVoiceMs ?? 500),
@@ -154,7 +156,11 @@ export function AppShell() {
     dispatch({ type: "set_work_status", area: "suggestions", status: "generating" });
 
     try {
-      const transcriptWindow = getTranscriptWindow(chunks, current.settings.suggestionContextMinutes);
+      const transcriptWindow = getTranscriptWindowWithCap(
+        chunks,
+        current.settings.suggestionContextMinutes,
+        current.settings.suggestionContextChars,
+      );
       const response = await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -625,7 +631,11 @@ export function AppShell() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             apiKey,
-            transcriptWindow: getTranscriptWindow(current.transcriptChunks, current.settings.expandedAnswerContextMinutes),
+            transcriptWindow: getTranscriptWindowWithCap(
+              current.transcriptChunks,
+              current.settings.expandedAnswerContextMinutes,
+              current.settings.expandedAnswerContextChars,
+            ),
             chatHistory,
             userMessage: message,
             clickedSuggestion,

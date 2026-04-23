@@ -74,7 +74,7 @@ export function SuggestionsPanel({
           disabled={isBusy}
           className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm font-semibold text-slate-200 transition hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Reload suggestions
+          ↻ Reload suggestions
         </button>
         <span className="text-xs text-slate-500">
           {state.status.mic === "recording" ? `auto-refresh in ${remainingSeconds}s` : `auto-refresh ~${Math.round(refreshIntervalMs / 1000)}s`}
@@ -89,9 +89,18 @@ export function SuggestionsPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {state.suggestionBatches.length === 0 ? (
-          <div className="rounded-md border border-slate-800 bg-slate-900/70 px-4 py-5 text-sm leading-6 text-slate-400">
-            Suggestion batches will appear here after the first transcript chunk. New batches stay at the top and older
-            batches remain available below.
+          <div className="flex h-full flex-col">
+            <div className="mx-4 mt-3 rounded-md border border-blue-500/30 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-300">
+              On reload or auto every ~30s, generate <strong className="font-semibold text-slate-100">3 fresh suggestions</strong> from
+              recent transcript context. New batches appear at the top; older batches push down. Each is a tappable card:
+              a <span className="text-blue-300">question to ask</span>, a{" "}
+              <span className="text-violet-300">talking point</span>, an{" "}
+              <span className="text-emerald-300">answer</span>, or a{" "}
+              <span className="text-amber-300">fact-check</span>. The preview alone should already be useful.
+            </div>
+            <p className="flex flex-1 items-center justify-center text-sm font-semibold text-slate-500">
+              Suggestions appear here once recording starts.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

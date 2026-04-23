@@ -12,6 +12,7 @@ type TranscriptPanelProps = {
 export function TranscriptPanel({ state, errors, onToggleMic }: TranscriptPanelProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const isRecording = state.status.mic === "recording";
+  const micLabel = state.status.mic === "idle" ? "idle" : state.status.mic;
   const micTone =
     state.status.mic === "recording" ? "active" : state.status.mic === "error" ? "error" : "idle";
   const showTranscriptWork =
@@ -34,7 +35,7 @@ export function TranscriptPanel({ state, errors, onToggleMic }: TranscriptPanelP
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">1. Mic & Transcript</p>
         </div>
         <div className="flex items-center gap-2">
-          <StatusBadge label={state.status.mic} tone={micTone} />
+          <StatusBadge label={micLabel} tone={micTone} />
           {showTranscriptWork ? <StatusBadge label={state.status.transcript} tone={transcriptTone} /> : null}
         </div>
       </header>
@@ -55,9 +56,8 @@ export function TranscriptPanel({ state, errors, onToggleMic }: TranscriptPanelP
           </button>
           <div>
             <p className="text-sm font-semibold leading-5 text-slate-300">
-              {isRecording ? "Recording. Transcript updates every 8 seconds." : "Stopped. Click to resume."}
+              {isRecording ? "Recording. Transcript appends every ~30s." : "Click mic to start. Transcript appends every ~30s."}
             </p>
-            <p className="mt-1 text-xs text-slate-500">Live suggestions refresh every 16 seconds.</p>
           </div>
         </div>
 
@@ -70,9 +70,14 @@ export function TranscriptPanel({ state, errors, onToggleMic }: TranscriptPanelP
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {state.transcriptChunks.length === 0 ? (
-          <div className="rounded-md border border-blue-500/30 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-300">
-            The transcript scrolls and appends new chunks every 8 seconds while recording. Paste your Groq key in
-            settings, then use the mic button to start.
+          <div className="flex h-full flex-col">
+            <div className="mx-4 mt-3 rounded-md border border-blue-500/30 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-300">
+              The transcript scrolls and appends new chunks every ~30 seconds while recording. Use the mic button to
+              start/stop. Include an export button so we can pull the full session.
+            </div>
+            <p className="flex flex-1 items-center justify-center text-sm font-semibold text-slate-500">
+              No transcript yet - start the mic.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

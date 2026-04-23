@@ -11,6 +11,33 @@ export function getTranscriptWindow(chunks: TranscriptChunk[], minutes: number) 
   return chunks.filter((chunk) => new Date(chunk.endedAt).getTime() >= cutoff);
 }
 
+export function capTranscriptWindowByChars(chunks: TranscriptChunk[], maxChars: number) {
+  if (maxChars <= 0 || chunks.length === 0) {
+    return chunks;
+  }
+
+  const selected: TranscriptChunk[] = [];
+  let totalChars = 0;
+
+  for (let index = chunks.length - 1; index >= 0; index -= 1) {
+    const chunk = chunks[index];
+    const chunkChars = transcriptToText([chunk]).length + 1;
+
+    if (selected.length > 0 && totalChars + chunkChars > maxChars) {
+      break;
+    }
+
+    selected.unshift(chunk);
+    totalChars += chunkChars;
+  }
+
+  return selected;
+}
+
+export function getTranscriptWindowWithCap(chunks: TranscriptChunk[], minutes: number, maxChars: number) {
+  return capTranscriptWindowByChars(getTranscriptWindow(chunks, minutes), maxChars);
+}
+
 export function transcriptToText(chunks: TranscriptChunk[]) {
   return chunks
     .map((chunk) => {

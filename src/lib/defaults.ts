@@ -10,18 +10,20 @@ export const CHAT_MODEL = "openai/gpt-oss-120b" as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   groqApiKey: "",
-  chunkIntervalMs: 8000,
+  chunkIntervalMs: 30000,
   silenceGateEnabled: true,
   voiceActivityThreshold: 0.012,
   minVoiceMs: 500,
-  suggestionRefreshIntervalMs: 16000,
+  suggestionRefreshIntervalMs: 30000,
   suggestionContextMinutes: 10,
+  suggestionContextChars: 4500,
   expandedAnswerContextMinutes: 25,
+  expandedAnswerContextChars: 10000,
   previousSuggestionBatches: 3,
   liveSuggestionPrompt: DEFAULT_LIVE_SUGGESTION_PROMPT,
   expandedAnswerPrompt: DEFAULT_EXPANDED_ANSWER_PROMPT,
   chatPrompt: DEFAULT_CHAT_PROMPT,
 };
 
-export const LOCAL_SETTINGS_KEY = "twinmind.live.settings.v2";
+export const LOCAL_SETTINGS_KEY = "twinmind.live.settings.v6";
 export const SESSION_API_KEY = "twinmind.live.groqApiKey.v1";
