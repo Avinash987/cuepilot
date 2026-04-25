@@ -71,6 +71,7 @@ export function AppShell() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const vadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const segmentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const segmentBlobsRef = useRef<Blob[]>([]);
   const queueRef = useRef<AudioJob[]>([]);
   const processingRef = useRef(false);
@@ -116,6 +117,9 @@ export function AppShell() {
       }
       if (vadTimerRef.current) {
         clearInterval(vadTimerRef.current);
+      }
+      if (suggestionTimerRef.current) {
+        clearTimeout(suggestionTimerRef.current);
       }
       recorderRef.current?.stop();
       audioSourceRef.current?.disconnect();
@@ -207,12 +211,14 @@ export function AppShell() {
         return false;
       }
 
+      const attemptedAt = Date.now();
+      lastSuggestionRefreshAtRef.current = attemptedAt;
+      setNextSuggestionDueAt(attemptedAt + current.settings.suggestionRefreshIntervalMs);
+
       const ok = await generateSuggestions(chunks, latestChunk);
 
       if (ok) {
-        lastSuggestionRefreshAtRef.current = Date.now();
         lastSuggestedTranscriptIdRef.current = latestId;
-        setNextSuggestionDueAt(lastSuggestionRefreshAtRef.current + current.settings.suggestionRefreshIntervalMs);
       }
 
       return ok;
@@ -509,6 +515,52 @@ export function AppShell() {
     startRecorderSegmentRef.current = startRecorderSegment;
   }, [startRecorderSegment]);
 
+  useEffect(() => {
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current);
+      suggestionTimerRef.current = null;
+    }
+
+    if (state.status.mic !== "recording" || state.transcriptChunks.length === 0) {
+      return;
+    }
+
+    if (state.status.suggestions === "generating" || state.status.transcript === "transcribing") {
+      return;
+    }
+
+    const intervalMs = state.settings.suggestionRefreshIntervalMs;
+    const dueAt = lastSuggestionRefreshAtRef.current
+      ? lastSuggestionRefreshAtRef.current + intervalMs
+      : Date.now() + intervalMs;
+    const delayMs = Math.max(0, dueAt - Date.now());
+
+    suggestionTimerRef.current = setTimeout(() => {
+      const current = stateRef.current;
+      const lastChunk = current.transcriptChunks[current.transcriptChunks.length - 1];
+
+      if (!lastChunk) {
+        return;
+      }
+
+      void maybeGenerateSuggestions(current.transcriptChunks, lastChunk, true);
+    }, delayMs);
+
+    return () => {
+      if (suggestionTimerRef.current) {
+        clearTimeout(suggestionTimerRef.current);
+        suggestionTimerRef.current = null;
+      }
+    };
+  }, [
+    maybeGenerateSuggestions,
+    state.settings.suggestionRefreshIntervalMs,
+    state.status.mic,
+    state.status.suggestions,
+    state.status.transcript,
+    state.transcriptChunks.length,
+  ]);
+
   const startMic = useCallback(async () => {
     if (!normalizeGroqApiKey(stateRef.current.settings.groqApiKey)) {
       dispatch({ type: "add_error", panel: "settings", message: "Paste a Groq API key before recording." });
@@ -524,8 +576,8 @@ export function AppShell() {
       currentMimeTypeRef.current = mimeType;
       recordingActiveRef.current = true;
       stopRequestedRef.current = false;
-      lastSuggestionRefreshAtRef.current = Date.now();
-      setNextSuggestionDueAt(lastSuggestionRefreshAtRef.current + stateRef.current.settings.suggestionRefreshIntervalMs);
+      lastSuggestionRefreshAtRef.current = 0;
+      setNextSuggestionDueAt(null);
       setupVoiceActivity(stream);
       startRecorderSegment();
       dispatch({ type: "set_mic_status", status: "recording" });
@@ -554,6 +606,7 @@ export function AppShell() {
       stopRequestedRef.current = false;
       cleanupAudioResources();
     }
+    setNextSuggestionDueAt(null);
     dispatch({ type: "set_mic_status", status: "paused" });
   }, [cleanupAudioResources, clearSegmentTimer]);
 

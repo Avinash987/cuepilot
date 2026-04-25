@@ -121,19 +121,15 @@ export function SuggestionsPanel({
                     key={suggestion.id}
                     type="button"
                     onClick={() => onSelectSuggestion(suggestion)}
-                    className="w-full rounded-lg border border-blue-500/50 bg-slate-900/80 px-3.5 py-3 text-left transition hover:border-blue-300 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full rounded-lg border border-blue-500/50 bg-slate-900/80 px-3.5 py-3 text-left transition hover:border-blue-300 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      index > 0 ? "opacity-75" : ""
+                    }`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded border px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.16em] ${typeClasses[suggestion.type]}`}
                       >
                         {typeLabels[suggestion.type]}
-                      </span>
-                      <span className="rounded border border-slate-700 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-400">
-                        {suggestion.urgency}
-                      </span>
-                      <span className="rounded border border-slate-700 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-400">
-                        {suggestion.confidence}
                       </span>
                     </div>
                     <h3 className="mt-2 text-sm font-bold leading-5 text-slate-100">{suggestion.title}</h3>
