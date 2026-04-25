@@ -97,10 +97,9 @@ Editable in the app:
 
 ## Tradeoffs
 
-- No database or authentication because the assignment only needs a single browser session.
-- Suggestions are non-streaming so the UI only renders validated JSON batches.
-- Chat streams through a server-sent event response for faster perceived latency.
-- There is no rolling summary yet; the time window plus character cap keeps context recent, bounded, and easy to reason about.
+- Suggestions are non streaming so the UI only renders validated JSON batches.
+- Chat streams through a server sent event response for faster perceived latency.
+- There is no rolling summary, the time window plus character cap keeps context recent, bounded, and easy to reason about.
 - Chat markdown is rendered with a small local renderer instead of a large dependency.
 - The recorder rotates complete media segments instead of uploading raw timeslice fragments, because browser WebM fragments are not always independently decodable by Whisper.
 
