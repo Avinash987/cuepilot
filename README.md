@@ -2,6 +2,10 @@
 
 A Next.js web app for the TwinMind live suggestions assignment. It records microphone audio, transcribes short complete audio segments with Groq Whisper, generates exactly 3 live suggestions from recent meeting context, and streams detailed chat answers with Groq GPT-OSS 120B.
 
+## Live App
+
+- Production: [https://twinmind-assignment-iota.vercel.app/](https://twinmind-assignment-iota.vercel.app/)
+
 ## Stack
 
 - Next.js App Router, TypeScript, Tailwind CSS
@@ -25,6 +29,15 @@ The API key is stored only in `sessionStorage`. Prompts and numeric settings are
 ## Documentation
 
 - [Architecture](./docs/ARCHITECTURE.md): runtime flow, state model, audio pipeline, API routes, prompt strategy, and module map.
+
+## Submission Notes
+
+- Uses Groq for all model calls
+- Transcription model: `whisper-large-v3`
+- Suggestions and chat model: `openai/gpt-oss-120b`
+- User supplies their own Groq API key in the app
+- Session-only app: no login, no database, no transcript persistence across reloads
+- Export includes transcript, suggestion batches, chat history, timestamps, settings, and model ids
 
 ## Product Flow
 
