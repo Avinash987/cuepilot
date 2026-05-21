@@ -1,5 +1,6 @@
 export type MicStatus = "idle" | "recording" | "paused" | "error";
 export type WorkStatus = "idle" | "transcribing" | "generating" | "streaming" | "error";
+export type CaptureSource = "microphone" | "tab_audio";
 
 export type TranscriptChunk = {
   id: string;
@@ -62,6 +63,7 @@ export type PanelError = {
 
 export type AppSettings = {
   groqApiKey: string;
+  captureSource: CaptureSource;
   chunkIntervalMs: number;
   silenceGateEnabled: boolean;
   voiceActivityThreshold: number;

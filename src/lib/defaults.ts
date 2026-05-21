@@ -10,6 +10,7 @@ export const CHAT_MODEL = "openai/gpt-oss-120b" as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   groqApiKey: "",
+  captureSource: "microphone",
   chunkIntervalMs: 30000,
   silenceGateEnabled: true,
   voiceActivityThreshold: 0.012,

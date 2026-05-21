@@ -12,7 +12,7 @@ import { downloadSessionExport } from "@/lib/exportSession";
 import { normalizeGroqApiKey } from "@/lib/groq";
 import { appReducer, createId, createInitialState } from "@/lib/reducer";
 import { getTranscriptWindowWithCap } from "@/lib/transcript";
-import type { AppSettings, ChatMessage, Suggestion, SuggestionBatch, TranscriptChunk } from "@/lib/types";
+import type { AppSettings, CaptureSource, ChatMessage, Suggestion, SuggestionBatch, TranscriptChunk } from "@/lib/types";
 
 type AudioJob = {
   blob: Blob;
@@ -66,6 +66,7 @@ export function AppShell() {
   const stateRef = useRef(state);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const sourceStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -125,6 +126,7 @@ export function AppShell() {
       audioSourceRef.current?.disconnect();
       void audioContextRef.current?.close();
       streamRef.current?.getTracks().forEach((track) => track.stop());
+      sourceStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -388,10 +390,38 @@ export function AppShell() {
     void audioContextRef.current?.close();
     audioContextRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    sourceStreamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    sourceStreamRef.current = null;
     recorderRef.current = null;
     segmentBlobsRef.current = [];
   }, [clearSegmentTimer]);
+
+  const stopCaptureFromEndedTrack = useCallback(() => {
+    if (!recordingActiveRef.current) {
+      return;
+    }
+
+    recordingActiveRef.current = false;
+    stopRequestedRef.current = true;
+    clearSegmentTimer();
+
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    } else {
+      stopRequestedRef.current = false;
+      cleanupAudioResources();
+    }
+
+    setNextSuggestionDueAt(null);
+    dispatch({ type: "set_mic_status", status: "paused" });
+    dispatch({
+      type: "add_error",
+      panel: "transcript",
+      message: "Audio sharing ended. Start capture again to continue transcribing.",
+    });
+  }, [cleanupAudioResources, clearSegmentTimer]);
 
   const setupVoiceActivity = useCallback((stream: MediaStream) => {
     const AudioContextConstructor =
@@ -561,6 +591,34 @@ export function AppShell() {
     state.transcriptChunks.length,
   ]);
 
+  const requestCaptureStream = useCallback(async (captureSource: CaptureSource) => {
+    if (captureSource === "tab_audio") {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+      const audioTracks = displayStream.getAudioTracks();
+
+      if (audioTracks.length === 0) {
+        displayStream.getTracks().forEach((track) => track.stop());
+        throw new Error("No tab audio was shared. Choose the meeting tab and enable tab audio sharing.");
+      }
+
+      const audioStream = new MediaStream(audioTracks);
+      displayStream.getTracks().forEach((track) => {
+        track.onended = () => {
+          queueMicrotask(() => stopCaptureFromEndedTrack());
+        };
+      });
+
+      sourceStreamRef.current = displayStream;
+      return audioStream;
+    }
+
+    sourceStreamRef.current = null;
+    return navigator.mediaDevices.getUserMedia({ audio: true });
+  }, [stopCaptureFromEndedTrack]);
+
   const startMic = useCallback(async () => {
     if (!normalizeGroqApiKey(stateRef.current.settings.groqApiKey)) {
       dispatch({ type: "add_error", panel: "settings", message: "Paste a Groq API key before recording." });
@@ -570,7 +628,7 @@ export function AppShell() {
 
     try {
       dispatch({ type: "clear_panel_errors", panel: "transcript" });
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await requestCaptureStream(stateRef.current.settings.captureSource);
       const mimeType = getSupportedAudioMimeType();
       streamRef.current = stream;
       currentMimeTypeRef.current = mimeType;
@@ -591,7 +649,7 @@ export function AppShell() {
         message: error instanceof Error ? error.message : "Could not start microphone.",
       });
     }
-  }, [cleanupAudioResources, setupVoiceActivity, startRecorderSegment]);
+  }, [cleanupAudioResources, requestCaptureStream, setupVoiceActivity, startRecorderSegment]);
 
   const stopMic = useCallback(() => {
     const recorder = recorderRef.current;
@@ -794,6 +852,13 @@ export function AppShell() {
     [saveSettings],
   );
 
+  const selectCaptureSource = useCallback(
+    (captureSource: CaptureSource) => {
+      saveSettings({ ...stateRef.current.settings, captureSource });
+    },
+    [saveSettings],
+  );
+
   const hasGroqApiKey = Boolean(normalizeGroqApiKey(state.settings.groqApiKey));
 
   return (
@@ -830,7 +895,12 @@ export function AppShell() {
         />
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 xl:grid-cols-[1.02fr_1fr_1.02fr]">
-          <TranscriptPanel state={state} errors={panelErrors.transcript} onToggleMic={toggleMic} />
+          <TranscriptPanel
+            state={state}
+            errors={panelErrors.transcript}
+            onToggleMic={toggleMic}
+            onSelectCaptureSource={selectCaptureSource}
+          />
           <SuggestionsPanel
             state={state}
             errors={panelErrors.suggestions}
