@@ -800,7 +800,7 @@ export function AppShell() {
     <main className="flex h-screen min-h-160 flex-col overflow-hidden bg-[#0b0d12] text-slate-100">
       <header className="flex items-center justify-between border-b border-slate-800 bg-[#10131a] px-5 py-3">
         <div>
-          <h1 className="text-base font-bold tracking-wide text-slate-100">TwinMind - Live Suggestions App</h1>
+          <h1 className="text-base font-bold tracking-wide text-slate-100">CuePilot</h1>
         </div>
         <div className="flex items-center gap-2">
           {hasGroqApiKey ? (

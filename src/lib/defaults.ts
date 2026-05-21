@@ -25,5 +25,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chatPrompt: DEFAULT_CHAT_PROMPT,
 };
 
-export const LOCAL_SETTINGS_KEY = "twinmind.live.settings.v6";
-export const SESSION_API_KEY = "twinmind.live.groqApiKey.v1";
+export const LOCAL_SETTINGS_KEY = "cuepilot.settings.v1";
+export const SESSION_API_KEY = "cuepilot.groqApiKey.v1";

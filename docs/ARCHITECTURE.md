@@ -1,6 +1,6 @@
 # Architecture
 
-This app is a session-only meeting copilot. The browser owns all live state, while Next.js API routes proxy Groq requests so the UI can use a user-provided Groq key without shipping any hard-coded secret.
+CuePilot is a session-only meeting copilot. The browser owns all live state, while Next.js API routes proxy Groq requests so the UI can use a user-provided Groq key without shipping any hard-coded secret.
 
 ## Runtime Flow
 

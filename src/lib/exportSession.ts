@@ -38,7 +38,7 @@ export function downloadSessionExport(state: AppState) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `twinmind-session-${state.sessionId}.json`;
+  anchor.download = `cuepilot-session-${state.sessionId}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

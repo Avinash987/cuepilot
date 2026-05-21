@@ -1,4 +1,4 @@
-# TwinMind Live Suggestions
+# CuePilot
 
 A real-time AI meeting copilot built with Next.js and Groq. It records microphone audio, transcribes complete audio segments with Whisper, generates exactly 3 context-aware live suggestions from the ongoing conversation, and streams grounded detailed answers in chat.
 
