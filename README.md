@@ -4,8 +4,8 @@ CuePilot is a real-time meeting copilot built with Next.js and Groq. It records 
 
 ## Live Links
 
-- Production: [https://twinmind-assignment-iota.vercel.app/](https://twinmind-assignment-iota.vercel.app/)
-- Repository: [https://github.com/Avinash987/twinmind-assignment](https://github.com/Avinash987/twinmind-assignment)
+- Production: [https://cue-pilot-beta.vercel.app/](https://cue-pilot-beta.vercel.app/)
+- Repository: [https://github.com/Avinash987/cuepilot](https://github.com/Avinash987/cuepilot)
 - Architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ## What It Does
