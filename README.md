@@ -7,6 +7,8 @@ A real-time AI meeting copilot built with Next.js and Groq. It records microphon
 - Production: [https://twinmind-assignment-iota.vercel.app/](https://twinmind-assignment-iota.vercel.app/)
 - GitHub: [https://github.com/Avinash987/twinmind-assignment](https://github.com/Avinash987/twinmind-assignment)
 
+Note: the public repo slug and Vercel domain still use the original project slug. The app, docs, prompts, and exported session naming have been rebranded to `CuePilot`.
+
 ## Why This Project
 
 I built this to explore one of the hardest parts of real-time AI UX: showing the right thing at the right time while a conversation is still happening. The interesting work here is not just calling a model. It is making browser audio capture reliable, keeping transcript and suggestion timing stable, grounding prompts in recent context, and making the output useful enough that someone could actually use it in a live meeting.
@@ -20,6 +22,16 @@ I built this to explore one of the hardest parts of real-time AI UX: showing the
 - Streaming detailed answers over Server-Sent Events
 - Prompt, timing, context, and audio controls in-app
 - Session export for transcript, suggestion batches, and chat history
+
+## Screenshots
+
+### Session setup
+
+![CuePilot setup](./docs/screenshots/cuepilot-setup.png)
+
+### Main workspace
+
+![CuePilot app shell](./docs/screenshots/cuepilot-shell.png)
 
 ## Stack
 
