@@ -1,10 +1,25 @@
 # TwinMind Live Suggestions
 
-A Next.js web app for the TwinMind live suggestions assignment. It records microphone audio, transcribes short complete audio segments with Groq Whisper, generates exactly 3 live suggestions from recent meeting context, and streams detailed chat answers with Groq GPT-OSS 120B.
+A real-time AI meeting copilot built with Next.js and Groq. It records microphone audio, transcribes complete audio segments with Whisper, generates exactly 3 context-aware live suggestions from the ongoing conversation, and streams grounded detailed answers in chat.
 
 ## Live App
 
 - Production: [https://twinmind-assignment-iota.vercel.app/](https://twinmind-assignment-iota.vercel.app/)
+- GitHub: [https://github.com/Avinash987/twinmind-assignment](https://github.com/Avinash987/twinmind-assignment)
+
+## Why This Project
+
+I built this to explore one of the hardest parts of real-time AI UX: showing the right thing at the right time while a conversation is still happening. The interesting work here is not just calling a model. It is making browser audio capture reliable, keeping transcript and suggestion timing stable, grounding prompts in recent context, and making the output useful enough that someone could actually use it in a live meeting.
+
+## Highlights
+
+- Live browser microphone capture with rotating complete recorder segments
+- Sequential transcription pipeline using Groq `whisper-large-v3`
+- Timed live suggestion batches using Groq `openai/gpt-oss-120b`
+- Structured JSON suggestions with schema validation and retry fallback
+- Streaming detailed answers over Server-Sent Events
+- Prompt, timing, context, and audio controls in-app
+- Session export for transcript, suggestion batches, and chat history
 
 ## Stack
 
@@ -30,7 +45,7 @@ The API key is stored only in `sessionStorage`. Prompts and numeric settings are
 
 - [Architecture](./docs/ARCHITECTURE.md): runtime flow, state model, audio pipeline, API routes, prompt strategy, and module map.
 
-## Submission Notes
+## Technical Notes
 
 - Uses Groq for all model calls
 - Transcription model: `whisper-large-v3`
