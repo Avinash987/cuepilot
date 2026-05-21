@@ -3,6 +3,7 @@ import type { AppState, ExportedSession } from "./types";
 
 export function buildExport(state: AppState): ExportedSession {
   const safeSettings = {
+    captureSource: state.settings.captureSource,
     chunkIntervalMs: state.settings.chunkIntervalMs,
     silenceGateEnabled: state.settings.silenceGateEnabled,
     voiceActivityThreshold: state.settings.voiceActivityThreshold,
