@@ -44,6 +44,7 @@ export function SuggestionsPanel({
   const isBusy = state.status.suggestions === "generating" || state.status.transcript === "transcribing";
   const showStatus = state.status.suggestions === "generating" || state.status.suggestions === "error";
   const tone = state.status.suggestions === "generating" ? "busy" : state.status.suggestions === "error" ? "error" : "idle";
+  const refreshCadenceLabel = `~${Math.round(refreshIntervalMs / 1000)}s`;
   const remainingSeconds = nextSuggestionDueAt
     ? now
       ? Math.max(0, Math.ceil((nextSuggestionDueAt - now) / 1000))
@@ -77,7 +78,7 @@ export function SuggestionsPanel({
           ↻ Reload suggestions
         </button>
         <span className="text-xs text-slate-500">
-          {state.status.mic === "recording" ? `auto-refresh in ${remainingSeconds}s` : `auto-refresh ~${Math.round(refreshIntervalMs / 1000)}s`}
+          {state.status.mic === "recording" ? `auto-refresh in ${remainingSeconds}s` : `auto-refresh ${refreshCadenceLabel}`}
         </span>
       </div>
 
@@ -91,9 +92,10 @@ export function SuggestionsPanel({
         {state.suggestionBatches.length === 0 ? (
           <div className="flex h-full flex-col">
             <div className="mx-4 mt-3 rounded-md border border-blue-500/30 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-300">
-              On reload or auto every ~30s, generate <strong className="font-semibold text-slate-100">3 fresh suggestions</strong> from
-              recent transcript context. New batches appear at the top; older batches push down. Each is a tappable card:
-              a <span className="text-blue-300">question to ask</span>, a{" "}
+              On reload or auto every {refreshCadenceLabel}, generate{" "}
+              <strong className="font-semibold text-slate-100">3 fresh suggestions</strong> from recent transcript
+              context. New batches appear at the top; older batches push down. Each is a tappable card: a{" "}
+              <span className="text-blue-300">question to ask</span>, a{" "}
               <span className="text-violet-300">talking point</span>, an{" "}
               <span className="text-emerald-300">answer</span>, or a{" "}
               <span className="text-amber-300">fact-check</span>. The preview alone should already be useful.

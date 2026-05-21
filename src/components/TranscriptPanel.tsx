@@ -14,6 +14,7 @@ export function TranscriptPanel({ state, errors, onToggleMic, onSelectCaptureSou
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const isRecording = state.status.mic === "recording";
   const captureSource = state.settings.captureSource;
+  const transcriptCadenceLabel = `~${Math.round(state.settings.chunkIntervalMs / 1000)}s`;
   const micLabel = state.status.mic === "idle" ? "idle" : state.status.mic;
   const micTone =
     state.status.mic === "recording" ? "active" : state.status.mic === "error" ? "error" : "idle";
@@ -60,9 +61,9 @@ export function TranscriptPanel({ state, errors, onToggleMic, onSelectCaptureSou
             <p className="text-sm font-semibold leading-5 text-slate-300">
               {isRecording
                 ? captureSource === "tab_audio"
-                  ? "Recording shared tab audio. Transcript appends every ~30s."
-                  : "Recording microphone. Transcript appends every ~30s."
-                : "Choose an input and start. Transcript appends every ~30s."}
+                  ? `Recording shared tab audio. Transcript appends every ${transcriptCadenceLabel}.`
+                  : `Recording microphone. Transcript appends every ${transcriptCadenceLabel}.`
+                : `Choose an input and start. Transcript appends every ${transcriptCadenceLabel}.`}
             </p>
             <p className="mt-1 text-xs text-slate-500">
               {captureSource === "tab_audio"
@@ -116,8 +117,8 @@ export function TranscriptPanel({ state, errors, onToggleMic, onSelectCaptureSou
         {state.transcriptChunks.length === 0 ? (
           <div className="flex h-full flex-col">
             <div className="mx-4 mt-3 rounded-md border border-blue-500/30 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-300">
-              The transcript scrolls and appends new chunks every ~30 seconds while recording. Use microphone mode for
-              nearby speech, or tab audio mode when the meeting is playing on the same machine.
+              The transcript scrolls and appends new chunks every {transcriptCadenceLabel} while recording. Use
+              microphone mode for nearby speech, or tab audio mode when the meeting is playing on the same machine.
             </div>
             <p className="flex flex-1 items-center justify-center text-sm font-semibold text-slate-500">
               No transcript yet - start the mic.
