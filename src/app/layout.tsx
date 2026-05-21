@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CuePilot",
-  description: "Real-time meeting copilot with live transcript, suggestions, and grounded chat.",
+  title: "CuePilot | Live Meeting Copilot",
+  description: "Real-time meeting copilot with live transcript, timed suggestions, and grounded streamed answers.",
 };
 
 export default function RootLayout({

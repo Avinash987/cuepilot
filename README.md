@@ -1,95 +1,90 @@
 # CuePilot
 
-A real-time AI meeting copilot built with Next.js and Groq. It records microphone audio, transcribes complete audio segments with Whisper, generates exactly 3 context-aware live suggestions from the ongoing conversation, and streams grounded detailed answers in chat.
+CuePilot is a real-time meeting copilot built with Next.js and Groq. It records microphone audio in the browser, transcribes complete audio segments with Whisper, surfaces exactly 3 context-aware live suggestions, and streams grounded follow-up answers in chat.
 
-## Live App
+## Live Links
 
 - Production: [https://twinmind-assignment-iota.vercel.app/](https://twinmind-assignment-iota.vercel.app/)
-- GitHub: [https://github.com/Avinash987/twinmind-assignment](https://github.com/Avinash987/twinmind-assignment)
+- Repository: [https://github.com/Avinash987/twinmind-assignment](https://github.com/Avinash987/twinmind-assignment)
+- Architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
-Note: the public repo slug and Vercel domain still use the original project slug. The app, docs, prompts, and exported session naming have been rebranded to `CuePilot`.
+## What It Does
 
-## Why This Project
+- Captures live mic audio with rotating complete media segments
+- Transcribes sequentially with Groq `whisper-large-v3`
+- Generates exactly 3 non-repeating live suggestion cards with Groq `openai/gpt-oss-120b`
+- Streams expanded answers for clicked cards and typed chat questions
+- Exposes prompts, timing, context windows, and audio gating in-app
+- Exports transcript, suggestion batches, chat history, timestamps, and settings as JSON
 
-I built this to explore one of the hardest parts of real-time AI UX: showing the right thing at the right time while a conversation is still happening. The interesting work here is not just calling a model. It is making browser audio capture reliable, keeping transcript and suggestion timing stable, grounding prompts in recent context, and making the output useful enough that someone could actually use it in a live meeting.
+## System Overview
 
-## Highlights
-
-- Live browser microphone capture with rotating complete recorder segments
-- Sequential transcription pipeline using Groq `whisper-large-v3`
-- Timed live suggestion batches using Groq `openai/gpt-oss-120b`
-- Structured JSON suggestions with schema validation and retry fallback
-- Streaming detailed answers over Server-Sent Events
-- Prompt, timing, context, and audio controls in-app
-- Session export for transcript, suggestion batches, and chat history
+```mermaid
+flowchart LR
+    Mic["Microphone"] --> Recorder["Browser recorder rotation"]
+    Recorder --> Queue["FIFO audio queue"]
+    Queue --> Transcribe["/api/transcribe"]
+    Transcribe --> Whisper["Groq Whisper Large V3"]
+    Whisper --> Transcript["Transcript reducer state"]
+    Transcript --> Suggest["/api/suggestions"]
+    Suggest --> SuggestModel["Groq GPT-OSS 120B"]
+    SuggestModel --> Cards["3 live suggestion cards"]
+    Transcript --> Chat["/api/chat"]
+    Cards --> Chat
+    Chat --> ChatModel["Groq GPT-OSS 120B"]
+    ChatModel --> Stream["SSE chat stream"]
+    Stream --> UI["Chat panel"]
+    Transcript --> Export["Session export JSON"]
+    Cards --> Export
+    UI --> Export
+    Settings["sessionStorage + localStorage"] --> Recorder
+    Settings --> Suggest
+    Settings --> Chat
+```
 
 ## Screenshots
 
-### Session setup
+### First-run setup
 
 ![CuePilot setup](./docs/screenshots/cuepilot-setup.png)
 
 ### Main workspace
 
-![CuePilot app shell](./docs/screenshots/cuepilot-shell.png)
+![CuePilot workspace](./docs/screenshots/cuepilot-shell.png)
 
-## Stack
+## Why This Build Is Interesting
 
-- Next.js App Router, TypeScript, Tailwind CSS
-- Browser-only session state with `useReducer`
-- No login, database, or server-side persistence
-- Groq OpenAI-compatible APIs:
-  - Transcription: `whisper-large-v3`
-  - Suggestions and chat: `openai/gpt-oss-120b`
+The hard part is not calling a model. The hard part is making the loop stable enough that the output is usable during a real conversation:
 
-## Run Locally
-
-```bash
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000` and paste a Groq API key on the setup screen. Settings remain available for prompt, context, timing, and audio tuning.
-
-The API key is stored only in `sessionStorage`. Prompts and numeric settings are stored in `localStorage`.
-
-## Documentation
-
-- [Architecture](./docs/ARCHITECTURE.md): runtime flow, state model, audio pipeline, API routes, prompt strategy, and module map.
-
-## Technical Notes
-
-- Uses Groq for all model calls
-- Transcription model: `whisper-large-v3`
-- Suggestions and chat model: `openai/gpt-oss-120b`
-- User supplies their own Groq API key in the app
-- Session-only app: no login, no database, no transcript persistence across reloads
-- Export includes transcript, suggestion batches, chat history, timestamps, settings, and model ids
+- browser audio has to be chunked into files Whisper can actually decode
+- transcript updates have to stay ordered
+- suggestion refreshes need cadence control and repetition control
+- clicked answers need more context than live cards without turning into long reports
+- structured suggestion output has to survive model formatting drift
 
 ## Product Flow
 
 1. The browser records mic audio as complete rotating `MediaRecorder` segments.
-2. The default segment size is 30 seconds to match the assignment cadence, configurable in Settings.
-3. Audio segments enter a FIFO queue.
-4. One sequential pipeline runs at a time:
-   `audio chunk -> transcribe -> append transcript`.
-5. Suggestions run on a separate cadence, 30 seconds by default. Settings allow lower values for demos, but the shipped default follows the assignment.
-6. Manual refresh flushes the current recorder segment and forces a suggestion refresh.
-7. Very short, silent, or unusable segments are skipped safely instead of interrupting the session.
-8. Each suggestion refresh creates one new batch with exactly 3 cards at the top.
-9. Clicking a card adds it to the right-side chat and streams a detailed answer.
-10. Export JSON includes transcript chunks, suggestion batches, chat history, settings, timestamps, and model IDs. The Groq key is excluded.
+2. The default transcript and suggestion cadence is roughly 30 seconds, with lower values still available in Settings for demos.
+3. Each completed segment enters a FIFO transcription queue.
+4. The app transcribes one segment at a time and appends only non-empty transcript chunks.
+5. The suggestion scheduler checks whether enough time has passed and whether new transcript exists.
+6. `/api/suggestions` receives recent transcript, the latest chunk, prior batches, and the editable live prompt.
+7. The model returns exactly 3 validated suggestion cards, which render as the newest batch at the top.
+8. Clicking a card or sending a typed chat question calls `/api/chat`.
+9. The chat route streams deltas back to the UI over Server-Sent Events.
+10. Export builds a single JSON artifact from in-memory session state and excludes the Groq API key.
 
 ## Prompt Strategy
 
-The live suggestion prompt is optimized for timing and usefulness instead of summaries. It first asks the model to silently infer the conversation mode, then choose the best mix of cards for that moment:
+The live suggestion prompt is optimized for timing, usefulness, and variety rather than summary quality. It asks the model to silently infer the current conversation mode, then choose the right mix of cards for that moment:
 
-- **Setup**: clarify topic, goal, agenda, stakeholders, and success criteria
-- **Discovery**: uncover missing inputs, compare options, and answer active questions
-- **Tradeoff**: pressure-test costs, risks, assumptions, and decision criteria
-- **Handoff**: turn the discussion into owners, next steps, deadlines, and open risks
+- `SETUP`: establish agenda, stakeholders, goals, and constraints
+- `DISCOVERY`: uncover missing inputs, compare options, answer active questions
+- `TRADEOFF`: pressure-test costs, risks, assumptions, and decision criteria
+- `HANDOFF`: convert the discussion into owners, next steps, deadlines, and unresolved risks
 
-The available card types are:
+Available card types:
 
 - answer
 - question to ask
@@ -99,36 +94,49 @@ The available card types are:
 - risk
 - next step
 
-Each preview must be useful without clicking. The suggestion model receives the last 10 minutes of transcript capped to 4,500 recent characters, the latest chunk separately, and recent prior suggestion batches to reduce repetition. The prompt also tells the model to treat repeated ASR chunks, partial sentences, and noisy audio as lower-confidence context, and to avoid precise external facts unless the transcript supports them or the card explicitly frames the item as something to verify. Transcript and suggestion refreshes default to roughly 30 seconds to match the assignment while still allowing faster demo tuning in Settings.
+Grounding rules:
 
-Suggestions use Groq structured outputs with a JSON schema, then the app validates the returned batch before rendering. The fallback parser remains in place so a transient formatting issue does not break the live session.
+- live suggestions use the most recent 10 minutes of transcript, capped to 4,500 characters
+- the latest chunk is passed separately so the model weights what was just said
+- previous batches are passed back in so the model avoids repeating the same idea
+- noisy ASR, partial sentences, and repeated chunks are treated as lower-confidence context
+- unsupported external facts should be phrased as something to verify, not presented as certainty
 
-Clicked suggestions use a larger transcript window by default, 25 minutes capped to 10,000 recent characters, with a separate expanded-answer prompt. The answer uses a fixed structure: **Context**, **Key points**, and **You could say:**. This keeps answers grounded, skimmable, and directly usable in the meeting rather than turning the chat panel into a long report. Direct chat uses the same transcript context and one continuous chat history.
+Clicked answers use a wider transcript window by default, 25 minutes capped to 10,000 characters. They follow a fixed structure:
 
-## Settings
+1. `Context`
+2. `Key points`
+3. `You could say`
 
-Editable in the app:
+That keeps the chat panel skimmable and directly usable during the meeting.
 
-- Groq API key
-- live suggestion prompt
-- expanded answer prompt
-- direct chat prompt
-- chunk interval
-- suggestion refresh interval
-- live suggestion context window
-- live suggestion character cap
-- expanded answer context window
-- expanded answer character cap
-- number of previous suggestion batches to include
-- silence gate toggle, voice threshold, and minimum voice duration
+## Stack
 
-## Tradeoffs
+- Next.js App Router
+- React + TypeScript
+- Tailwind CSS
+- Browser-only session state with `useReducer`
+- Groq OpenAI-compatible APIs
+  - Transcription: `whisper-large-v3`
+  - Suggestions and chat: `openai/gpt-oss-120b`
 
-- Suggestions are non streaming so the UI only renders validated JSON batches.
-- Chat streams through a server sent event response for faster perceived latency.
-- There is no rolling summary, the time window plus character cap keeps context recent, bounded, and easy to reason about.
-- Chat markdown is rendered with a small local renderer instead of a large dependency.
-- The recorder rotates complete media segments instead of uploading raw timeslice fragments, because browser WebM fragments are not always independently decodable by Whisper.
+## Runtime and Storage
+
+- No login
+- No database
+- No transcript persistence across reloads
+- Groq API key stored in `sessionStorage`
+- Prompt and numeric settings stored in `localStorage`
+- Transcript, suggestions, and chat kept in memory for the current session only
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000), paste a Groq API key, allow mic access, and start a session.
 
 ## Validation
 
@@ -136,3 +144,10 @@ Editable in the app:
 npm run lint
 npm run build
 ```
+
+## Tradeoffs
+
+- Suggestions are non-streaming so the UI only renders complete validated JSON batches.
+- Chat streams because perceived latency matters more there than atomic rendering.
+- The app uses time-windowed transcript grounding rather than a rolling summary to keep context recent and easier to reason about.
+- The recorder rotates complete media files instead of uploading raw timeslice fragments because fragmented browser WebM output is less reliable for Whisper.

@@ -2,6 +2,27 @@
 
 CuePilot is a session-only meeting copilot. The browser owns all live state, while Next.js API routes proxy Groq requests so the UI can use a user-provided Groq key without shipping any hard-coded secret.
 
+## Topology
+
+```mermaid
+flowchart TD
+    Browser["React client"] --> Reducer["useReducer session state"]
+    Browser --> Storage["sessionStorage / localStorage"]
+    Browser --> TranscribeRoute["POST /api/transcribe"]
+    Browser --> SuggestRoute["POST /api/suggestions"]
+    Browser --> ChatRoute["POST /api/chat"]
+    TranscribeRoute --> Whisper["Groq whisper-large-v3"]
+    SuggestRoute --> SuggestModel["Groq openai/gpt-oss-120b"]
+    ChatRoute --> ChatModel["Groq openai/gpt-oss-120b"]
+    Whisper --> Reducer
+    SuggestModel --> Reducer
+    ChatModel --> Reducer
+    Reducer --> TranscriptPanel["Transcript panel"]
+    Reducer --> SuggestionsPanel["Suggestions panel"]
+    Reducer --> ChatPanel["Chat panel"]
+    Reducer --> Export["JSON export"]
+```
+
 ## Runtime Flow
 
 1. `AppShell` loads local prompt/timing settings and the session Groq key.
@@ -67,6 +88,13 @@ The default prompt strategy is exposed in Settings because prompt behavior is a 
 - useful previews that stand alone
 - cautious handling of unsupported facts and noisy ASR
 - concise clicked-card answers that can be skimmed during a live conversation
+
+## Timing Model
+
+- Transcript segments default to `30000ms`
+- Suggestion refreshes default to `30000ms`
+- Manual reload flushes the active recorder segment before asking for a fresh batch
+- Lower cadences remain available in Settings for demos and tuning, but the shipped defaults stay aligned with the assignment behavior
 
 ## Module Map
 
